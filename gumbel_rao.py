@@ -40,6 +40,7 @@ def conditional_gumbel(logits, D, k=1):
                 (1 - D) * -torch.log(E/torch.exp(logits) + Ei / Z))
     return adjusted - logits
 
+
 def exact_conditional_gumbel(logits, D, k=1):
     """Same as conditional_gumbel but uses rejection sampling."""
     # Rejection sampling.
@@ -52,21 +53,25 @@ def exact_conditional_gumbel(logits, D, k=1):
     return torch.stack(gumbels)
 
 
-
 def replace_gradient(value, surrogate):
     """Returns `value` but backpropagates gradients through `surrogate`."""
     return surrogate + (value - surrogate).detach()
 
-def gumbel_rao(logits, k, temp=1.0):
-    """
-    Returns the argmax(input, dim=-1) as a one-hot vector, with
-    gumbel-rao gradient.
+
+def gumbel_rao(logits, k, temp=1.0, I=None):
+    """Returns a categorical sample from logits (over axis=-1) as a
+    one-hot vector, with gumbel-rao gradient.
 
     k: integer number of samples to use in the rao-blackwellization.
-    1 sample reduces to straight-through gumbel-softmax
+    1 sample reduces to straight-through gumbel-softmax.
+
+    I: optional, categorical sample to use instead of drawing a new
+    sample. Should be a tensor(shape=logits.shape[:-1], dtype=int64).
+
     """
     num_classes = logits.shape[-1]
-    I = torch.distributions.categorical.Categorical(logits=logits).sample()
+    if I is None:
+        I = torch.distributions.categorical.Categorical(logits=logits).sample()
     D = torch.nn.functional.one_hot(I, num_classes).float()
     adjusted = logits + conditional_gumbel(logits, D, k=k)
     surrogate = torch.nn.functional.softmax(adjusted/temp, dim=-1).mean(dim=0)
