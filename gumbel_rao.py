@@ -36,7 +36,7 @@ def conditional_gumbel(logits, D, k=1):
     # partition function (normalization constant)
     Z = logits.exp().sum(dim=-1, keepdim=True)
     # Sampled gumbel-adjusted logits
-    adjusted = (D * (-torch.log(E) + torch.log(Z)) +
+    adjusted = (D * (-torch.log(Ei) + torch.log(Z)) +
                 (1 - D) * -torch.log(E/torch.exp(logits) + Ei / Z))
     return adjusted - logits
 
